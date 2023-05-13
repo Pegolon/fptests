@@ -5,6 +5,8 @@ open Amazon
 open Amazon.S3
 open Amazon.S3.Transfer
 open System.Threading.Tasks
+open FsToolkit.ErrorHandling
+
 
 let calculateSha256Hash (input: byte[]) =
     use sha256 = SHA256.Create()
@@ -71,6 +73,38 @@ let processInput (input: byte[]) =
         let! result = downloadFromS3 "Processing" downloadPath
         return result
     }
+
+
+type FileMetadata =
+    { LastModified: DateTime
+      ETag: string
+      Size: int64 }
+
+let checkS3FileMetadata (bucketName: string) (fileName: string) (callback: FileMetadata -> unit) =
+    let rec checkMetadataLoop (lastMetadata: FileMetadata option) =
+        async {
+            try
+                use client = new AmazonS3Client()
+                let! metadata = client.GetObjectMetadataAsync(bucketName, fileName)
+
+                match lastMetadata with
+                | Some prevMetadata when prevMetadata = metadata ->
+                    return! Async.Sleep 1000 // Keine Änderung, warte und überprüfe erneut
+                | _ ->
+                    let currentMetadata =
+                        { LastModified = metadata.LastModified
+                          ETag = metadata.ETag
+                          Size = metadata.ContentLength }
+                    callback currentMetadata // Aufruf der Callback-Funktion mit den geänderten Metadaten
+                    return! Async.Sleep 1000 // Warte und überprüfe erneut
+
+            with
+            | ex ->
+                printfn "Fehler beim Überprüfen der Metadaten: %s" ex.Message
+                return! Async.Sleep 1000 // Bei einem Fehler warte und überprüfe erneut
+        }
+
+    Async.StartImmediate (checkMetadataLoop None)
 
 [<EntryPoint>]
 let main argv =
