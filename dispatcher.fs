@@ -28,25 +28,6 @@ let getFileMetadata (bucketName: string) (path: string) =
                 failwithf "Fehler beim Abrufen der Metadaten: %s" ex.Message
     }
 
-[<EntryPoint>]
-let main argv =
-    let bucketName = "YourBucketName" // Hier den Namen deines S3-Buckets einfügen
-    let filePath = "YourFilePath" // Hier den Pfad zur S3-Datei einfügen
-
-    let result = Async.RunSynchronously (getFileMetadata bucketName filePath)
-    printfn "%A" result
-    0
-
-
-[<EntryPoint>]
-let main argv =
-    let bucketName = "YourBucketName" // Hier den Namen deines S3-Buckets einfügen
-    let filePath = "YourFilePath" // Hier den Pfad zur S3-Datei einfügen
-
-    let result = Async.RunSynchronously (getFileMetadata bucketName filePath)
-    printfn "%A" result
-    0
-
 let uploadToS3 (bucketName: string) (path: string) (data: byte[]) =
     async {
         use client = new AmazonS3Client()
