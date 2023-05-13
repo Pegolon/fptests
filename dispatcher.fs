@@ -11,6 +11,42 @@ let calculateSha256Hash (input: byte[]) =
     let hashBytes = sha256.ComputeHash(input)
     Convert.ToBase64String(hashBytes)
 
+let getFileMetadata (bucketName: string) (path: string) =
+    async {
+        use client = new AmazonS3Client()
+        let request = new GetObjectMetadataRequest(BucketName = bucketName, Key = path)
+        try
+            let! response = client.GetObjectMetadataAsync(request)
+            return response.Metadata
+        with
+            | :? AmazonS3Exception as ex ->
+                if ex.ErrorCode = "NoSuchKey" then
+                    return System.Collections.Generic.Dictionary<string, string>()
+                else
+                    failwithf "Fehler beim Abrufen der Metadaten: %s" ex.Message
+            | ex ->
+                failwithf "Fehler beim Abrufen der Metadaten: %s" ex.Message
+    }
+
+[<EntryPoint>]
+let main argv =
+    let bucketName = "YourBucketName" // Hier den Namen deines S3-Buckets einfügen
+    let filePath = "YourFilePath" // Hier den Pfad zur S3-Datei einfügen
+
+    let result = Async.RunSynchronously (getFileMetadata bucketName filePath)
+    printfn "%A" result
+    0
+
+
+[<EntryPoint>]
+let main argv =
+    let bucketName = "YourBucketName" // Hier den Namen deines S3-Buckets einfügen
+    let filePath = "YourFilePath" // Hier den Pfad zur S3-Datei einfügen
+
+    let result = Async.RunSynchronously (getFileMetadata bucketName filePath)
+    printfn "%A" result
+    0
+
 let uploadToS3 (bucketName: string) (path: string) (data: byte[]) =
     async {
         use client = new AmazonS3Client()
